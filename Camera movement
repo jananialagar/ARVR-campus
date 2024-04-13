@@ -1,0 +1,339 @@
+cameraMov.cs
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using DG.Tweening;
+
+public class cameraMov : MonoBehaviour
+{
+    [SerializeField] private Transform _player;
+    [SerializeField] private float _speed;
+    private Transform _camera;
+    private Vector3 _offset;
+    private void Awake()
+    {
+        _camera = this.transform;
+        _offset = _camera.position - _player.position;
+    }
+    private void Update()
+    {
+        Follow();
+    }
+    private void Follow()
+    {
+        _camera.DOMoveX(_player.position.x + _offset.x, _speed * Time.deltaTime);
+        _camera.DOMoveZ(_player.position.z + _offset.z, _speed * Time.deltaTime);
+    }
+}
+
+
+animatedctrl.cs
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+[RequireComponent(typeof(Animator))]
+public class animatedCtrl : MonoBehaviour
+{
+    private Animator _animator;
+    private void Awake()
+    {
+        _animator = GetComponent<Animator>();
+    }
+    public void PlayIdle()
+    {
+        _animator.Play("Idle");
+    }
+    public void PlayRun()
+    {
+        _animator.Play("Run");
+    }
+}
+
+
+playerMove.cs
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+[RequireComponent(typeof(Rigidbody))]
+
+public class playerMov : MonoBehaviour
+{
+   [SerializeField] private FloatingJoystick _joystick;
+    [SerializeField] private animatedCtrl _animatedCtrl;
+    [SerializeField] private float _moveSpeed;
+    [SerializeField] private float _RotateSpeed;
+
+    private Rigidbody _rigidbody;
+    private Vector3 _moveVector;
+    private void Awake()
+    {
+        _rigidbody = GetComponent<Rigidbody>();
+    }
+    private void Update()
+    {
+        Move();
+    }
+    private void Move()
+    {
+        _moveVector = Vector3.zero;
+        _moveVector.x = _joystick.Horizontal * _moveSpeed * Time.deltaTime;
+        _moveVector.y = _joystick.Vertical * _moveSpeed * Time.deltaTime;
+
+        if(_joystick.Horizontal != 0 || _joystick.Vertical != 0)
+        {
+            Vector3 direction = Vector3.RotateTowards(transform.forward, _moveVector, _RotateSpeed * Time.deltaTime, 0.0f);
+            transform.rotation = Quaternion.LookRotation(direction);
+            _animatedCtrl.PlayRun();
+        }
+        else if(_joystick.Horizontal == 0 && _joystick.Vertical == 0)
+        {
+            _animatedCtrl.PlayIdle();
+        }
+        _rigidbody.MovePosition(_rigidbody.position + _moveVector);
+    }
+
+}
+
+Collider.cs
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class TextController : MonoBehaviour
+{
+    public GameObject myText;
+
+    // Start is called before the first frame update
+    void Start()
+    {
+        myText.SetActive(false);
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        
+    }
+    private void OnTriggerEnter(UnityEngine.Collider other)
+    {
+        if (other.CompareTag("Player"))
+        {
+            myText.SetActive(true);
+        }
+    }
+    private void OnTriggerExit(UnityEngine.Collider other)
+    {
+        if (other.CompareTag("Player"))
+        {
+            myText.SetActive(false);
+        }
+    }
+}
+
+
+Script controll
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class ScriptController : MonoBehaviour
+{
+    public FixedTouchField _FixedTouchField;
+    public PlayerCamera _PlayerCamera;
+    void Start()
+    {
+
+    }
+
+
+    void Update()
+    {
+        _PlayerCamera.LookAxis = _FixedTouchField.TouchDist;
+    }
+}
+
+
+Player camera.cs
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class PlayerCamera : MonoBehaviour
+{
+    private float Xmove;
+    private float Ymove;
+    [SerializeField] private Transform PlayerBody;
+    public Vector2 LookAxis;
+    public float Sensivity = 40f;
+    void Start()
+    {
+
+    }
+
+
+    void Update()
+    {
+        Xmove = LookAxis.x * Sensivity * Time.deltaTime;
+        PlayerBody.Rotate(Vector3.up * Xmove);
+
+    }
+}
+
+
+
+Fixed joystick
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.EventSystems;
+
+public class FixedTouchField : MonoBehaviour, IPointerDownHandler, IPointerUpHandler
+{
+    [HideInInspector]
+    public Vector2 TouchDist;
+    [HideInInspector]
+    public Vector2 PointerOld;
+    [HideInInspector]
+    protected int PointerId;
+    [HideInInspector]
+    public bool Pressed;
+
+    // Use this for initialization
+    void Start()
+    {
+
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        if (Pressed)
+        {
+            if (PointerId >= 0 && PointerId < Input.touches.Length)
+            {
+                TouchDist = Input.touches[PointerId].position - PointerOld;
+                PointerOld = Input.touches[PointerId].position;
+            }
+            else
+            {
+                TouchDist = new Vector2(Input.mousePosition.x, Input.mousePosition.y) - PointerOld;
+                PointerOld = Input.mousePosition;
+            }
+        }
+        else
+        {
+            TouchDist = new Vector2();
+        }
+    }
+
+    public void OnPointerDown(PointerEventData eventData)
+    {
+        Pressed = true;
+        PointerId = eventData.pointerId;
+        PointerOld = eventData.position;
+    }
+
+
+    public void OnPointerUp(PointerEventData eventData)
+    {
+        Pressed = false;
+    }
+}
+
+
+Character.cs
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Movement : MonoBehaviour
+{
+
+    public FixedJoystick _joystick;
+    public float _moveSpeed;
+    public float _rotateSpeed;
+
+    public float _currentSpeed;
+    public Animator _animator;
+    public CharacterController _characterController;
+    public Vector3 _moveVectore;
+
+
+    public Transform _grouncCheack;
+    public LayerMask _layerMask;
+    public float _groundDistance;
+    public float jumpHeight = 1f;
+
+    private float _Gravity = -9.81f;
+    private bool _isGrounded;
+    private Vector3 _velocity;
+
+    void Start()
+    {
+        _characterController = GetComponent<CharacterController>();
+        _animator = GetComponent<Animator>();
+    }
+
+
+    void Update()
+    {
+        Movementt();
+        Gravityy();
+    }
+
+    public void Movementt()
+    {
+        _moveVectore = Vector3.zero;
+        _moveVectore.x = _joystick.Horizontal;
+        _moveVectore.z = _joystick.Vertical;
+
+        _currentSpeed = _moveVectore.magnitude;
+
+        _animator.SetFloat("Moving", _currentSpeed);
+
+        if (_currentSpeed != 0f)
+        {
+            Vector3 direction = Vector3.RotateTowards(transform.forward, _moveVectore, _rotateSpeed * Time.deltaTime, 0.0f);
+            transform.rotation = Quaternion.LookRotation(direction);
+            AnimationRun();
+        }
+        else if (_currentSpeed == 0)
+        {
+            AimationIdle();
+        }
+
+        _characterController.Move(_moveVectore * _moveSpeed * Time.deltaTime);
+
+    }
+
+    public void AnimationRun()
+    {
+        _animator.SetBool("Move", true);
+    }
+    public void AimationIdle()
+    {
+        _animator.SetBool("Move", false);
+    }
+
+
+    public void Gravityy()
+    {
+        _isGrounded = Physics.CheckSphere(_grouncCheack.position, _groundDistance, _layerMask);
+
+        if (_velocity.y < 0 && _isGrounded)
+        {
+            _velocity.y = -2f;
+        }
+
+        _velocity.y += _Gravity * Time.deltaTime;
+        _characterController.Move(_velocity * Time.deltaTime);
+    }
+}
+
+
