@@ -1,0 +1,69 @@
+CHARACTER WALK
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Movement : MonoBehaviour
+{
+    public FixedJoystick _joystick;
+    public float _moveSpeed;
+    public float _rotateSpeed;
+    public float _currentSpeed;
+    public Animator _animator;
+    public CharacterController _charactercontroller;
+    public Vector3 _moveVector;
+    public Transform _groundCheck;
+    public LayerMask _layerMask;
+    public float _groundDistance;
+    private float _Gravity = -9.81f;
+    private bool _isGrounded;
+    private Vector3 _velocity;
+
+    void Start()
+    {
+        _charactercontroller = GetComponent<CharacterController>();
+        _animator = GetComponent<Animator>();
+        
+    }
+
+   
+    void Update()
+    {
+        _Movement();
+        Gravity();
+    }
+    public void _Movement()
+    {
+        _moveVector = Vector3.zero;
+        _moveVector.x = _joystick.Horizontal;
+        _moveVector.z = _joystick.Vertical;
+        _currentSpeed = _moveVector.magnitude;
+        _animator.SetFloat("Moving", _currentSpeed);
+        if(_currentSpeed != 0f)
+        {
+            Vector3 direction = Vector3.RotateTowards(transform.forward, _moveVector, _rotateSpeed * Time.deltaTime, 0.0f);
+            transform.rotation = Quaternion.LookRotation(direction);
+            AnimationWalk();
+        }
+        else if(_currentSpeed ==0)
+        {
+            AnimationIdle();
+        }
+        _charactercontroller.Move(_moveVector * _moveSpeed * Time.deltaTime);
+    }
+    public void AnimationWalk()
+    {
+        _animator.SetBool("Move", true);
+    }
+    public void AnimationIdle()
+    {
+        _animator.SetBool("Move", false);
+    }
+    public void Gravity()
+    {
+        _isGrounded = Physics.CheckSphere(_groundCheck.position, _groundDistance, _layerMask);
+    }
+}
+
+
